@@ -12,26 +12,41 @@ extern bool isSplitStatus;
 mutex mtx;
 
 void sleepThreadJob(int depth){
-	//cout << "Start sleep at depth = " << depth << endl;
+#ifdef PRINT_LOG
+	cout << "Start sleep at depth = " << depth << endl;
+#endif
 	this_thread::sleep_for(chrono::milliseconds(MAX_TIME));
 	mtx.lock();
 	if (depth == totalDepth){
 		timeOut = true;
 	}
 	mtx.unlock();
-	//cout << "Wake up" << endl;
+#ifdef PRINT_LOG
+	cout << "Wake up" << endl;
+#endif
 }
 
 void stealThreadJob(int * board, Position myPos, Position enemyPos, int curTotalDepth){
-	//unsigned long long startDelTime = getCurTime();
+#ifdef PRINT_LOG
+	unsigned long long startDelTime = getCurTime();
+#endif
 	removeDatabaseAtDepth(curTotalDepth - 2);
 	removeDatabaseAtDepth(curTotalDepth - 1);
-	//cout << "Delete time = " << (getCurTime() - startDelTime) << "ms" << endl;
+#ifdef PRINT_LOG
+	cout << "Delete time = " << (getCurTime() - startDelTime) << "ms" << endl;
+#endif
 
 	if (isSplitStatus == true || totalDepth != curTotalDepth){
+		if (board != NULL){
+			delete[] board;
+			board = NULL;
+		}
 		return;
 	}
-	//cout << "Start steal depth at " << curTotalDepth << endl;
+	
+#ifdef PRINT_LOG
+	cout << "Start steal depth at " << curTotalDepth << endl;
+#endif
 
 	int depthLimitLvl = START_DEPTH_LEVEL;
 	int myUpper = getUpperLongest(board, myPos);
@@ -40,17 +55,23 @@ void stealThreadJob(int * board, Position myPos, Position enemyPos, int curTotal
 	StateInfo * info = getStateInfo(totalDepth, hashVal);
 
 	do {
-		//unsigned long long turnStartTime = getCurTime();
+#ifdef PRINT_LOG
+		unsigned long long turnStartTime = getCurTime();
+#endif
 
 		enemyMinimax(board, myPos, enemyPos, 0, depthLimitLvl, -INF, INF, hashVal, info, mtx, curTotalDepth);
 		mtx.lock();
 		if (curTotalDepth == totalDepth){
-			//cout << "steal depth: " << depthLimitLvl << " time: " << (getCurTime() - turnStartTime) << "ms" << endl;
+#ifdef PRINT_LOG
+			cout << "steal depth: " << depthLimitLvl << " time: " << (getCurTime() - turnStartTime) << "ms" << endl;
+#endif
 			++depthLimitLvl;
 		}
 		mtx.unlock();
 	} while (curTotalDepth == totalDepth && depthLimitLvl <= myUpper + 1);
-	//cout << "Final steal depth: " << (depthLimitLvl - 1) << endl;
+#ifdef PRINT_LOG
+	cout << "Final steal depth: " << (depthLimitLvl - 1) << endl;
+#endif
 
 	if (board != NULL){
 		delete[] board;
@@ -69,9 +90,12 @@ void mainThreadJob(){
 	AI *p_ai = AI::GetInstance();
 	if (p_ai->IsMyTurn())
 	{
-		//cout << "Set timeOut = false at depth = " << totalDepth << endl;
+#ifdef PRINT_LOG
+		cout << "Set timeOut = false at depth = " << totalDepth << endl;
+		unsigned long long startTime = getCurTime();
+#endif
 		timeOut = false;
-		//unsigned long long startTime = getCurTime();
+		
 		thread(sleepThreadJob, totalDepth).detach();
 
 		int * board = p_ai->GetBoard();	// Access block at (x, y) by using board[CONVERT_COORD(x,y)]
@@ -95,7 +119,9 @@ void mainThreadJob(){
 		}
 
 		do {
-			//unsigned long long turnStartTime = getCurTime();
+#ifdef PRINT_LOG			
+			unsigned long long turnStartTime = getCurTime();
+#endif
 			int tmpCmd;
 			if (isSplitStatus){
 				tmpCmd = dlsEstLongest(board, myPos, 0, depthLimitLvl, MIN(myUpper, enemyUpper + 1));
@@ -105,13 +131,17 @@ void mainThreadJob(){
 			}
 			if (timeOut == false){
 				cmd = tmpCmd;
-				//cout << "depth: " << depthLimitLvl << " time: " << (getCurTime() - turnStartTime) << "ms" << endl;
+#ifdef PRINT_LOG
+				cout << "depth: " << depthLimitLvl << " time: " << (getCurTime() - turnStartTime) << "ms" << endl;
+#endif
 				++depthLimitLvl;
 			}
 		} while (timeOut == false && depthLimitLvl <= myUpper);
-		//cout << "Final depth: " << (depthLimitLvl - 1) << endl;
-		//cout << "Time: " << (getCurTime() - startTime) << "ms" << endl;
-		//cout << "command = " << cmd << endl;
+#ifdef PRINT_LOG
+		cout << "Final depth: " << (depthLimitLvl - 1) << endl;
+		cout << "Time: " << (getCurTime() - startTime) << "ms" << endl;
+		cout << "command = " << cmd << endl;
+#endif
 
 		//Remember to call AI_Move() within allowed time		
 		Game::GetInstance()->AI_Move(cmd);
