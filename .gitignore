@@ -12,6 +12,8 @@
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+20*_[Rr]elease/
+20*_[Dd]ebug/
 x64/
 x86/
 build/
