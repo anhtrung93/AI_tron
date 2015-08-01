@@ -108,6 +108,7 @@ void dfsUpperLongest(int * board, const Position & pos, DfsUpperObj * result, in
 		else {// when pos is cutVertices
 			int numRedTemp = ((isRed) ? 1 : 0) + curObj->numRed;
 			int numBlackTemp = ((isRed == false) ? 1 : 0) + curObj->numBlack;
+#pragma warning(suppress: 6011)
 			curCutInfo->area = MAX(maxAreaBasedOnRedBlack(numRedTemp, numBlackTemp, isRed), curCutInfo->area);
 
 			list<CutInfo *>::iterator itNextCuts;

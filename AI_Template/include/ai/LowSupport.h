@@ -42,9 +42,7 @@ inline void restoreBoard(int * board, const list<Position> & restoreList) {
 }
 
 inline Position moveDirection(const Position & pos, int direction) {
-	int newX = pos.x + MOVE_X[direction];
-	int newY = pos.y + MOVE_Y[direction];
-	return Position(newX, newY);
+	return Position(pos.x + MOVE_X[direction], pos.y + MOVE_Y[direction]);
 }
 
 inline int maxAreaBasedOnRedBlack(int numRed, int numBlack, bool isRedInit) {

@@ -5,6 +5,8 @@
 #include <mutex>
 #include <ai/DynamicLongest.h>
 
+#define PRINT_LOG
+
 extern bool timeOut;
 extern int totalDepth;
 extern bool isSplitStatus;

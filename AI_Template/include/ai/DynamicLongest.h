@@ -101,13 +101,6 @@ int heurEstForSplit(int * board, const Position & myPos, const Position & enemyP
 int minimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, bool processNeg = true){
 	bool isMaxPlayer = (depthLvl % 2 == 0) ? true : false;
 
-	//TODO remove following lines
-	/*unsigned long long newHash = hashBoard(board, myPos, enemyPos, isMaxPlayer);
-	if (newHash != hashVal){
-	cout << "HASH ERROR....................................................";
-	}*/
-	///////////////////////////////
-
 	if (info->depthExplore == -1){
 		info->isSplit = isSplit(board, myPos, enemyPos);
 	}
@@ -125,7 +118,6 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 			info->estVal = heurEstForSplit(board, myPos, enemyPos, isMaxPlayer);
 			info->depthExplore = 0;
 		}
-		//cout << "good";
 		return info->estVal;
 	}
 	else if (depthLvl >= depthLimitLvl){
@@ -152,7 +144,7 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 		if (inMatrix(newPos) && board[CONVERT_COORD(newPos.x, newPos.y)] == BLOCK_EMPTY){
 			unsigned long long newHashVal = hashMove(hashVal, posOfMovePlayer, newPos, isMaxPlayer);
 			if (info->nextStates[direction] == NULL){
-				info->nextStates[direction] = getStateInfo(totalDepth + depthLvl, newHashVal);
+				info->nextStates[direction] = getStateInfo(totalDepth + depthLvl + 1, newHashVal);
 			}
 			StateInfo * newStateInfo = info->nextStates[direction];
 
@@ -216,13 +208,6 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, mutex & mtx, const int curTotalDepth, bool processNeg = true){
 	bool isMaxPlayer = (depthLvl % 2 == 0) ? false : true;
 
-	//TODO remove following lines
-	/*unsigned long long newHash = hashBoard(board, myPos, enemyPos, isMaxPlayer);
-	if (newHash != hashVal){
-	cout << "HASH ERROR....................................................";
-	}*/
-	///////////////////////////////
-
 	bool tmpSplit = false;
 	if (info->depthExplore == -1){
 		tmpSplit = isSplit(board, myPos, enemyPos);
@@ -248,7 +233,6 @@ int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos,
 			}
 			mtx.unlock();
 		}
-		//cout << "good";
 		return tmpEstVal;
 	}
 	else if (depthLvl >= depthLimitLvl){
@@ -287,7 +271,7 @@ int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos,
 			if (info->nextStates[direction] == NULL){
 				mtx.lock();
 				if (curTotalDepth == totalDepth){
-					info->nextStates[direction] = getStateInfo(totalDepth + depthLvl, newHashVal);
+					info->nextStates[direction] = getStateInfo(totalDepth + depthLvl + 1, newHashVal);
 				}
 				mtx.unlock();
 			}
