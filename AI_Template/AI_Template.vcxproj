@@ -265,6 +265,10 @@
     <ClInclude Include="include\ai\StaticLongest.h" />
     <ClInclude Include="include\ai\Threads.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="testUnit\isSplitUnitTest.txt" />
+    <Text Include="testUnit\upperLongestUnitTest.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

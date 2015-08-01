@@ -54,4 +54,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="testUnit\isSplitUnitTest.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="testUnit\upperLongestUnitTest.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+  </ItemGroup>
 </Project>
