@@ -46,6 +46,10 @@ inline Position moveDirection(const Position & pos, int direction) {
 	return Position(pos.x + MOVE_X[direction], pos.y + MOVE_Y[direction]);
 }
 
+inline bool isPosRed(const Position & pos){
+	return ((pos.x + pos.y) % 2 == 0);
+}
+
 inline int maxAreaBasedOnRedBlack(int numRed, int numBlack, bool isRedInit) {
 	if (isRedInit && numRed > numBlack){
 		return numBlack * 2 + 1;
@@ -125,6 +129,10 @@ bool compareSuperPairMaxSecond(const pair<int, pair<int, unsigned long long> > &
 
 bool compareSuperPairMinSecond(const pair<int, pair<int, unsigned long long> > & a, const pair<int, pair<int, unsigned long long> > & b){
 	return (a.second.first < b.second.first);
+}
+
+bool compairPosMinSecondSecond(const pair<Position, pair<int, int>> & a, const pair<Position, pair<int, int>> & b){
+	return (a.second.second < b.second.second);
 }
 
 unsigned long long getCurTime(){
