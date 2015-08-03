@@ -6,6 +6,11 @@
 #include <ai/DynamicLongest.h>
 
 #define PRINT_LOG
+//#define PRINT_TEST
+#ifdef PRINT_TEST
+#include <fstream>
+#endif
+
 
 extern bool timeOut;
 extern int totalDepth;
@@ -145,6 +150,29 @@ void mainThreadJob(){
 		cout << "command = " << cmd << endl;
 #endif
 
+#ifdef PRINT_TEST
+		ofstream os("unitTest.txt", ofstream::app);
+		for (int idRow = 0; idRow < MAP_SIZE; ++idRow){
+			for (int idCol = 0; idCol < MAP_SIZE; ++idCol){
+				os << board[CONVERT_COORD(idRow, idCol)] << " ";
+			}
+			os << endl;
+		}
+		os << endl;
+		int depth = (rand() % 12) + 1;
+		os << myPos.x << " " << myPos.y << " " << enemyPos.x << " " << enemyPos.y << " " << depth << endl;
+		os << heurEstLongest(board, myPos) << " " << heurEstLongest2(board, myPos) << endl;
+		if (isSplitStatus == true){
+			os << heurEstForSplit(board, myPos, enemyPos, true) << " ";			
+		}
+		else {
+			os << heurEstForNonSplit(board, myPos, enemyPos, true) << " ";
+		}
+		os << minimax_old(board, myPos, enemyPos, 0, depth, -INF, INF) << endl;
+		
+		os.close();
+#endif
+		
 		//Remember to call AI_Move() within allowed time		
 		Game::GetInstance()->AI_Move(cmd);
 	}

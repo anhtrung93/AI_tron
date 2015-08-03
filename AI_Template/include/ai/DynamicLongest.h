@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <mutex>
 
+//TODO turn this off
+//#define UNIT_TEST
+
 extern bool timeOut;
 extern int totalDepth;
 
@@ -98,6 +101,56 @@ int heurEstForSplit(int * board, const Position & myPos, const Position & enemyP
 	return diff + (INF / 2) * ((diff > 0) ? 1 : -1);
 }
 
+int minimax_old(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta){
+	bool isMaxPlayer = (depthLvl % 2 == 0) ? true : false;
+
+	if (isSplit(board, myPos, enemyPos) == true){
+		return heurEstForSplit(board, myPos, enemyPos, isMaxPlayer);
+	}
+	else if (depthLvl >= depthLimitLvl){
+		return heurEstForNonSplit(board, myPos, enemyPos, isMaxPlayer);
+	}
+
+	Position posOfMovePlayer;
+	int result;
+
+	if (isMaxPlayer == true){
+		posOfMovePlayer = myPos;
+		result = -INF;
+	}
+	else {
+		posOfMovePlayer = enemyPos;
+		result = INF;
+	}
+
+	int directionToMove = UNKNOWN_DIRECTION;
+	vector<pair<int, pair<int, unsigned long long>>> nextMoves;
+	for (int direction = 1; direction <= 4; ++direction){
+		Position newPos = moveDirection(posOfMovePlayer, direction);
+		if (inMatrix(newPos) && board[CONVERT_COORD(newPos.x, newPos.y)] == BLOCK_EMPTY){
+			board[CONVERT_COORD(newPos.x, newPos.y)] = board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];
+			++board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it trails
+			if (isMaxPlayer == true){
+				result = MAX(result, minimax_old(board, newPos, enemyPos, depthLvl + 1, depthLimitLvl, alpha, beta));
+				alpha = MAX(alpha, result);
+			}
+			else {
+				result = MIN(result, minimax_old(board, myPos, newPos, depthLvl + 1, depthLimitLvl, alpha, beta));
+				beta = MIN(beta, result);
+			}
+			--board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it normal
+			board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_EMPTY;
+
+			if (beta < alpha){
+				break;
+			}
+		}
+	}
+
+	return result;
+}
+
+
 int minimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, bool processNeg = true){
 	bool isMaxPlayer = (depthLvl % 2 == 0) ? true : false;
 
@@ -138,7 +191,7 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 		result = INF;
 	}
 
-	vector<pair<int, pair<int, unsigned long long> > > nextMoves;
+	vector<pair<int, pair<int, unsigned long long>>> nextMoves;
 	for (int direction = 1; direction <= 4; ++direction){
 		Position newPos = moveDirection(posOfMovePlayer, direction);
 		if (inMatrix(newPos) && board[CONVERT_COORD(newPos.x, newPos.y)] == BLOCK_EMPTY){
@@ -148,7 +201,7 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 			}
 			StateInfo * newStateInfo = info->nextStates[direction];
 
-			pair<int, pair<int, unsigned long long> > tmp3(direction, pair<int, unsigned long long>(newStateInfo->estVal, newHashVal));
+			pair<int, pair<int, unsigned long long>> tmp3(direction, pair<int, unsigned long long>(newStateInfo->estVal, newHashVal));
 			nextMoves.push_back(tmp3);
 		}
 	}
@@ -197,12 +250,17 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 		info->depthExplore = depthLimitLvl - depthLvl;
 	}
 
+
+#ifndef UNIT_TEST
 	if (depthLvl == 0){
 		return directionToMove;
 	}
 	else {
 		return result;
 	}
+#else
+	return result;
+#endif
 }
 
 int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, mutex & mtx, const int curTotalDepth, bool processNeg = true){
@@ -263,7 +321,7 @@ int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos,
 		return 0;
 	}
 
-	vector<pair<int, pair<int, unsigned long long> > > nextMoves;
+	vector<pair<int, pair<int, unsigned long long>>> nextMoves;
 	for (int direction = 1; direction <= 4; ++direction){
 		Position newPos = moveDirection(posOfMovePlayer, direction);
 		if (inMatrix(newPos) && board[CONVERT_COORD(newPos.x, newPos.y)] == BLOCK_EMPTY){
@@ -280,7 +338,7 @@ int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos,
 				return 0;
 			}
 
-			pair<int, pair<int, unsigned long long> > tmp3(direction, pair<int, unsigned long long>(newStateInfo->estVal, newHashVal));
+			pair<int, pair<int, unsigned long long>> tmp3(direction, pair<int, unsigned long long>(newStateInfo->estVal, newHashVal));
 			nextMoves.push_back(tmp3);
 		}
 	}
