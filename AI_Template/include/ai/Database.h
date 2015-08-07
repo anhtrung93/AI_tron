@@ -6,14 +6,19 @@
 
 #define MAX_TOTAL_UNSPLIT_DEPTH 110
 
+const int FLAG_UPPER = 1;
+const int FLAG_EXACT = 2;
+const int FLAG_LOWER = 3;
+
 struct StateInfo{
 	bool isSplit;
 	int depthExplore; //-1 if has not been explored before
 	int estVal;
+	int flag;
 
 	StateInfo * nextStates[5];
 
-	StateInfo() : isSplit(false), depthExplore(-1), estVal(0) {
+	StateInfo() : isSplit(false), depthExplore(-1), estVal(0), flag(FLAG_EXACT) {
 		for (int id = 0; id < 5; ++id){
 			nextStates[id] = NULL;
 		}

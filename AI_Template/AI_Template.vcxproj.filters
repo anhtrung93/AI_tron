@@ -61,5 +61,14 @@
     <Text Include="testUnit\upperLongestUnitTest.txt">
       <Filter>Resource Files</Filter>
     </Text>
+    <Text Include="testUnit\heurEstLongestUnitTest.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="testUnit\heurEstUnitTest.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="testUnit\minimaxUnitTest.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>

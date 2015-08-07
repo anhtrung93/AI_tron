@@ -118,7 +118,6 @@
 //	is.close();
 //}
 //
-//
 //void unitTest_heurEst(){
 //	cout << "Start unitTest_heurEst: \n";
 //	const char IS_SPLIT_TEST[] = "E:\\Dropbox\\Projects\\GAMELOFT_AI_2015\\MyCode\\C++\\AI_Template\\testUnit\\heurEstUnitTest.txt";
@@ -170,7 +169,6 @@
 //	is.close();
 //}
 //
-//
 //void unitTest_minimax(){
 //	cout << "Start unitTest_minimax: \n";
 //
@@ -184,6 +182,9 @@
 //	Position myPos, enemyPos;
 //	for (int idTest = 0; idTest < numTest; ++idTest){
 //		initZobrist();
+//		for (int idDepth = 0; idDepth < 20; ++idDepth){
+//			removeDatabaseAtDepth(idDepth);
+//		}
 //		for (int idRow = 0; idRow < MAP_SIZE; ++idRow){
 //			for (int idCol = 0; idCol < MAP_SIZE; ++idCol){
 //				is >> board[CONVERT_COORD(idRow, idCol)];
@@ -195,10 +196,16 @@
 //		is >> heurEstLongestResult1 >> heurEstLongestResult2;
 //		int heurEstResult, minimaxValue;
 //		is >> heurEstResult >> minimaxValue;
+//		//cout << "test " << idTest << ": " << depth << endl;
 //		unsigned long long hashVal = hashBoard(board, myPos, enemyPos, true);
 //		StateInfo * info = getStateInfo(0, hashVal);
-//		int calVal = minimax(board, myPos, enemyPos, 0, depth, -INF, INF , hashVal, info, true);
-//		if ((abs(minimaxValue) < 300 && (minimaxValue != calVal)) || (abs(minimaxValue) >= 300 && minimaxValue * calVal < 0)){
+//		int calVal = 0;
+//		for (int idDepth = 1; idDepth <= depth; ++idDepth){
+//			//calVal = minimax(board, myPos, enemyPos, 0, idDepth, -INF, INF, hashVal, info, true);
+//			//calVal = mtdf(board, myPos, enemyPos, calVal, idDepth, hashVal, info);
+//			calVal = minimax_scout(board, myPos, enemyPos, 0, idDepth, -INF, INF, hashVal, info, true);
+//		}		
+//		if ((abs(minimaxValue) < 500 && (minimaxValue != calVal)) || (abs(minimaxValue) >= 300 && minimaxValue * calVal < 0)){
 //			cout << "Test minimax #" << idTest << ": " << "failed " << minimaxValue << " " << calVal << endl;
 //		}
 //	}
@@ -231,7 +238,7 @@
 //	for (int count = 0; count < 1000; ++count){
 //		isSplit(board, myPos, enemyPos);
 //	}
-//	cout << "Time isSplit_dfs = " << (getCurTime() - time) << endl;
+//	cout << "Time isSplit = " << (getCurTime() - time) << endl;
 //	time = getCurTime();
 //	for (int count = 0; count < 1000; ++count){
 //		isSplit_bfs(board, myPos, enemyPos);
@@ -266,6 +273,60 @@
 //	}
 //	cout << "Time heurEstForNonSplit = " << (getCurTime() - time) << endl;
 //
+//	/*time = getCurTime();
+//	for (int depth = 1; depth < 12; ++depth){
+//		minimax_old(board, myPos, enemyPos, 0, 12, -INF, INF);
+//	}
+//	cout << "Time minimax_old = " << (getCurTime() - time) << endl;*/
+//
+//	initZobrist();
+//	for (int idDepth = 0; idDepth < 25; ++idDepth){
+//		removeDatabaseAtDepth(idDepth);
+//	}
+//	unsigned long long hashVal = hashBoard(board, myPos, enemyPos, true);
+//	StateInfo * info = getStateInfo(0, hashVal);
+//	minimax_scout(board, myPos, enemyPos, 0, 16, -INF, INF, hashVal, info);
+//	time = getCurTime();
+//	for (int depth = 12; depth < 19; ++depth){
+//		unsigned long long time2 = getCurTime();
+//		int result = minimax_scout(board, myPos, enemyPos, 0, depth, -INF, INF, hashVal, info);
+//		cout << "Time depth " << depth << " minimax_scout = " << (getCurTime() - time2) << " " << result << endl;
+//	}
+//	cout << "Time minimax_scout = " << (getCurTime() - time) << endl;
+//
+//	totalDepth = 0;
+//	initZobrist();
+//	for (int idDepth = 0; idDepth < 25; ++idDepth){
+//		removeDatabaseAtDepth(idDepth);
+//	}	
+//	hashVal = hashBoard(board, myPos, enemyPos, true);
+//	info = getStateInfo(0, hashVal);
+//	mtdf(board, myPos, enemyPos, 0, 16, hashVal, info);
+//	time = getCurTime();
+//	int val = 0;
+//	for (int depth = 12; depth < 19; ++depth){
+//		unsigned long long time2 = getCurTime();
+//		val = mtdf(board, myPos, enemyPos, val, depth, hashVal, info);
+//		cout << "Time depth " << depth << " mtdf = " << (getCurTime() - time2) << " " << val << endl;
+//	}
+//	cout << "Time mtdf = " << (getCurTime() - time) << endl;
+//
+//
+//	initZobrist();
+//	for (int idDepth = 0; idDepth < 25; ++idDepth){
+//		removeDatabaseAtDepth(idDepth);
+//	}
+//	hashVal = hashBoard(board, myPos, enemyPos, true);
+//	info = getStateInfo(0, hashVal);
+//	minimax(board, myPos, enemyPos, 0, 16, -INF, INF, hashVal, info);
+//	time = getCurTime();
+//	for (int depth = 12; depth < 19; ++depth){
+//		unsigned long long time2 = getCurTime();
+//		int result = minimax(board, myPos, enemyPos, 0, depth, -INF, INF, hashVal, info);
+//		cout << "Time depth " << depth << " minimax = " << (getCurTime() - time2) << " " << result << endl;
+//	}
+//	cout << "Time minimax = " << (getCurTime() - time) << endl;
+//	
 //	delete[] board;
 //}
 //
