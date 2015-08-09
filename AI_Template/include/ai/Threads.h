@@ -6,17 +6,16 @@
 #include <ai/DynamicLongest.h>
 
 #define PRINT_LOG
+#define NOT_STEAL
 //#define PRINT_TEST
 #ifdef PRINT_TEST
 #include <fstream>
 #endif
 
-
 extern bool timeOut;
 extern int totalDepth;
 extern bool isSplitStatus;
-
-mutex mtx;
+extern mutex mtx;
 
 void sleepThreadJob(int depth){
 #ifdef PRINT_LOG
@@ -43,7 +42,13 @@ void stealThreadJob(int * board, Position myPos, Position enemyPos, int curTotal
 	cout << "Delete time = " << (getCurTime() - startDelTime) << "ms" << endl;
 #endif
 
-	if (isSplitStatus == true || totalDepth != curTotalDepth){
+	if (isSplitStatus == true || totalDepth != curTotalDepth
+#ifdef NOT_STEAL
+		|| true
+#endif
+		
+		
+		){
 		if (board != NULL){
 			delete[] board;
 			board = NULL;

@@ -200,10 +200,12 @@
 //		unsigned long long hashVal = hashBoard(board, myPos, enemyPos, true);
 //		StateInfo * info = getStateInfo(0, hashVal);
 //		int calVal = 0;
+//		timeOut = false;
 //		for (int idDepth = 1; idDepth <= depth; ++idDepth){
 //			//calVal = minimax(board, myPos, enemyPos, 0, idDepth, -INF, INF, hashVal, info, true);
 //			//calVal = mtdf(board, myPos, enemyPos, calVal, idDepth, hashVal, info);
 //			calVal = minimax_scout(board, myPos, enemyPos, 0, idDepth, -INF, INF, hashVal, info, true);
+//			//calVal = minimax_old(board, myPos, enemyPos, 0, idDepth, -INF, INF);
 //		}		
 //		if ((abs(minimaxValue) < 500 && (minimaxValue != calVal)) || (abs(minimaxValue) >= 300 && minimaxValue * calVal < 0)){
 //			cout << "Test minimax #" << idTest << ": " << "failed " << minimaxValue << " " << calVal << endl;
@@ -301,15 +303,15 @@
 //	}	
 //	hashVal = hashBoard(board, myPos, enemyPos, true);
 //	info = getStateInfo(0, hashVal);
-//	mtdf(board, myPos, enemyPos, 0, 16, hashVal, info);
+//	minimax_mtdf(board, myPos, enemyPos, 0, 16, -INF, INF, hashVal, info);
 //	time = getCurTime();
 //	int val = 0;
 //	for (int depth = 12; depth < 19; ++depth){
 //		unsigned long long time2 = getCurTime();
-//		val = mtdf(board, myPos, enemyPos, val, depth, hashVal, info);
-//		cout << "Time depth " << depth << " mtdf = " << (getCurTime() - time2) << " " << val << endl;
+//		val = minimax_mtdf(board, myPos, enemyPos, 0, depth, -INF, INF, hashVal, info);
+//		cout << "Time depth " << depth << " minimax_mtdf = " << (getCurTime() - time2) << " " << val << endl;
 //	}
-//	cout << "Time mtdf = " << (getCurTime() - time) << endl;
+//	cout << "Time minimax_mtdf = " << (getCurTime() - time) << endl;
 //
 //
 //	initZobrist();
@@ -326,15 +328,15 @@
 //		cout << "Time depth " << depth << " minimax = " << (getCurTime() - time2) << " " << result << endl;
 //	}
 //	cout << "Time minimax = " << (getCurTime() - time) << endl;
-//	
+//
 //	delete[] board;
 //}
 //
 //int main(void){
-//	unitTest_isSplit();
-//	unitTest_getUpperLongest();
-//	unitTest_heurEstLongest();
-//	unitTest_heurEst();
+//	//unitTest_isSplit();
+//	//unitTest_getUpperLongest();
+//	//unitTest_heurEstLongest();
+//	//unitTest_heurEst();
 //	unitTest_minimax();
 //	testTimeEachFunct();
 //	return 0;

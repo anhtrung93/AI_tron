@@ -2,8 +2,8 @@
 
 #include <ai/AI.h>
 #include <list>
-#include "Database.h"
 #include <Windows.h>
+#include <mutex>
 
 #define MIN(a, b) (((a) < (b))?(a):(b))
 #define MAX(a, b) (((a) > (b))?(a):(b))
@@ -21,11 +21,12 @@ const int START_DEPTH_LEVEL = 12;
 const int MAX_TIME = 2600;
 const int UNKNOWN_HEUR_VAL = 0;
 
-const int STOP_SEARCH_VAL = 256;
+const int STOP_SEARCH_VAL = 210;
 
 bool timeOut = false;
 int totalDepth = -1;
 bool isSplitStatus = false;
+mutex mtx;
 
 inline bool inMatrix(const Position & pos) {
 	if (pos.x >= 0 && pos.x < MAP_SIZE){
