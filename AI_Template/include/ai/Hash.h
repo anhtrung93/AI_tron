@@ -16,7 +16,7 @@ unsigned long long zobristTurn[NUM_ZOBRIST_PLAYER];
 
 const int ZOBRIST_ME = 0;
 const int ZOBRIST_ENEMY = 1;
-const int ZOBRIST_OBSTABLE = 2;
+const int ZOBRIST_OBSTACLE = 2;
 
 const int ZOBRIST_MY_TURN = 0;
 const int ZOBRIST_ENEMY_TURN = 1;
@@ -61,7 +61,7 @@ unsigned long long hashBoard(int * board, const Position & myPos, const Position
 				result ^= zobristTable[id][ZOBRIST_ENEMY];
 			}
 			else if (board[id] != BLOCK_EMPTY){
-				result ^= zobristTable[id][ZOBRIST_OBSTABLE];
+				result ^= zobristTable[id][ZOBRIST_OBSTACLE];
 			}
 		}
 	}
@@ -83,7 +83,7 @@ unsigned long long hashMove(unsigned long long oldHash, const Position & fromPos
 		oldHash ^= zobristTable[CONVERT_COORD(fromPos.x, fromPos.y)][ZOBRIST_ENEMY];
 		oldHash ^= zobristTable[CONVERT_COORD(toPos.x, toPos.y)][ZOBRIST_ENEMY];
 	}
-	oldHash ^= zobristTable[CONVERT_COORD(fromPos.x, fromPos.y)][ZOBRIST_OBSTABLE];
+	oldHash ^= zobristTable[CONVERT_COORD(fromPos.x, fromPos.y)][ZOBRIST_OBSTACLE];
 	oldHash ^= zobristTurn[ZOBRIST_MY_TURN];
 	oldHash ^= zobristTurn[ZOBRIST_ENEMY_TURN];
 	return oldHash;

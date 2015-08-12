@@ -681,7 +681,7 @@ int enemyMinimax_scout(int * board, const Position & myPos, const Position & ene
 
 	int alphaOrigin = alpha, betaOrigin = beta;
 	int directionToMove = UNKNOWN_DIRECTION;
-	int depthMax = depthLimitLvl - depthLvl;
+	int depthMax = depthLimitLvl - depthLvl;	
 	for (int idMove = 0; idMove < (int)nextMoves.size(); ++idMove){
 		int direction = nextMoves[idMove].first;
 		unsigned long long newHashVal = nextMoves[idMove].second.second;
@@ -691,9 +691,9 @@ int enemyMinimax_scout(int * board, const Position & myPos, const Position & ene
 		board[CONVERT_COORD(newPos.x, newPos.y)] = board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];
 		++board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it trails
 		if (isMaxPlayer == true){
-			int tmp = minimax_scout(board, newPos, enemyPos, depthLvl + 1, depthLimitLvl, alpha, beta, newHashVal, newStateInfo, processNeg);
+			int tmp = enemyMinimax_scout(board, newPos, enemyPos, depthLvl + 1, depthLimitLvl, alpha, beta, newHashVal, newStateInfo, mtx, curTotalDepth, processNeg);
 			if (tmp > alpha && tmp < betaOrigin && idMove > 0){
-				tmp = minimax_scout(board, newPos, enemyPos, depthLvl + 1, depthLimitLvl, tmp, betaOrigin, newHashVal, newStateInfo, processNeg);
+				tmp = enemyMinimax_scout(board, newPos, enemyPos, depthLvl + 1, depthLimitLvl, tmp, betaOrigin, newHashVal, newStateInfo, mtx, curTotalDepth, processNeg);
 			}
 			if (alpha < tmp){
 				alpha = tmp;
@@ -717,7 +717,7 @@ int enemyMinimax_scout(int * board, const Position & myPos, const Position & ene
 		depthMax = MAX(depthMax, info->depthExplore - 1);
 
 		if (curTotalDepth != totalDepth){
-			break;
+			return 0;
 		}
 		else if (isMaxPlayer){
 			if (alpha >= betaOrigin || result >= STOP_SEARCH_VAL){
