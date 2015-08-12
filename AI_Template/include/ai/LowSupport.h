@@ -5,6 +5,12 @@
 #include <Windows.h>
 #include <mutex>
 
+//TODO turn this off
+//#define UNIT_TEST
+//#define PRINT_LOG
+//#define NOT_STEAL
+//#define PRINT_TEST
+
 #define MIN(a, b) (((a) < (b))?(a):(b))
 #define MAX(a, b) (((a) > (b))?(a):(b))
 

@@ -3,6 +3,8 @@
 #include <ai/AI.h>
 #include "LowSupport.h"
 #include "HighSupport.h"
+#include "Hash.h"
+#include "Database.h"
 #include <list>
 #include <vector>
 
@@ -88,8 +90,25 @@ int heurEstLongest2(int * board, const Position & myPos, bool isFirst = true, li
 }
 
 int dlsEstLongest(int * board, const Position & myPos, int depthLvl, int depthLimitLvl, int depthToCut){
-	if (depthLvl >= depthLimitLvl){
-		return heurEstLongest2(board, myPos);
+	unsigned long long hashVal = hashBoard(board, myPos, Position(10, 10), true);
+	StateInfo * info = getStateInfo(totalDepth + depthLvl, hashVal);
+
+	if (depthLvl != 0 && (info->depthExplore >= depthLimitLvl - depthLvl || depthToCut <= info->estVal)){
+		return info->estVal;
+	}
+
+	if (depthLvl >= depthLimitLvl){		
+#ifndef UNIT_TEST
+		int heurEst2 = heurEstLongest2(board, myPos);
+		info->estVal = heurEst2;
+		info->depthExplore = 0;
+		return heurEst2;
+#else
+		int heurEst2 = heurEstLongest2(board, myPos);
+		info->estVal = heurEst2;
+		info->depthExplore = 0;
+		return heurEst2;
+#endif
 	}
 
 	int myID = board[CONVERT_COORD(myPos.x, myPos.y)];
@@ -114,10 +133,47 @@ int dlsEstLongest(int * board, const Position & myPos, int depthLvl, int depthLi
 	}
 	--board[CONVERT_COORD(myPos.x, myPos.y)];//make it not trail
 
+	info->estVal = result;
+	info->depthExplore = depthLimitLvl - depthLvl;
+
+#ifndef UNIT_TEST
 	if (depthLvl == 0){
 		return directionToMove;
 	}
 	else {
 		return result;
 	}
+#else
+	return result;
+#endif
+}
+
+int dlsEstLongest_old(int * board, const Position & myPos, int depthLvl, int depthLimitLvl, int depthToCut){
+	if (depthLvl >= depthLimitLvl){
+		return heurEstLongest2(board, myPos);
+	}
+
+	int myID = board[CONVERT_COORD(myPos.x, myPos.y)];
+	++board[CONVERT_COORD(myPos.x, myPos.y)];//Make it trail
+	int result = 1;
+	int directionToMove = UNKNOWN_DIRECTION;
+	for (int direction = 1; direction <= 4; ++direction){
+		Position newPos = moveDirection(myPos, direction);
+		if (inMatrix(newPos) && board[CONVERT_COORD(newPos.x, newPos.y)] == BLOCK_EMPTY){
+			board[CONVERT_COORD(newPos.x, newPos.y)] = myID;
+
+			int tmp = dlsEstLongest_old(board, newPos, depthLvl + 1, depthLimitLvl, depthToCut - 1);
+			board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_EMPTY;
+			if (tmp + 1 > result){
+				result = tmp + 1;
+				directionToMove = direction;
+			}
+			if (result >= depthToCut || timeOut){
+				break;
+			}
+		}
+	}
+	--board[CONVERT_COORD(myPos.x, myPos.y)];//make it not trail
+
+	return result;
 }

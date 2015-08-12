@@ -9,9 +9,6 @@
 #include <algorithm>
 #include <mutex>
 
-//TODO turn this off
-//#define UNIT_TEST
-
 extern bool timeOut;
 extern int totalDepth;
 
@@ -682,9 +679,9 @@ int enemyMinimax_scout(int * board, const Position & myPos, const Position & ene
 		return 0;
 	}
 
+	int alphaOrigin = alpha, betaOrigin = beta;
 	int directionToMove = UNKNOWN_DIRECTION;
 	int depthMax = depthLimitLvl - depthLvl;
-	int alphaOrigin = alpha, betaOrigin = beta;
 	for (int idMove = 0; idMove < (int)nextMoves.size(); ++idMove){
 		int direction = nextMoves[idMove].first;
 		unsigned long long newHashVal = nextMoves[idMove].second.second;
