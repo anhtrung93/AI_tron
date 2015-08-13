@@ -98,17 +98,10 @@ int dlsEstLongest(int * board, const Position & myPos, int depthLvl, int depthLi
 	}
 
 	if (depthLvl >= depthLimitLvl){		
-#ifndef UNIT_TEST
 		int heurEst2 = heurEstLongest2(board, myPos);
 		info->estVal = heurEst2;
 		info->depthExplore = 0;
 		return heurEst2;
-#else
-		int heurEst2 = heurEstLongest2(board, myPos);
-		info->estVal = heurEst2;
-		info->depthExplore = 0;
-		return heurEst2;
-#endif
 	}
 
 	int myID = board[CONVERT_COORD(myPos.x, myPos.y)];

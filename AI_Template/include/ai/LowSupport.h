@@ -6,7 +6,7 @@
 #include <mutex>
 
 //TODO turn this off
-//#define UNIT_TEST
+#define UNIT_TEST
 //#define PRINT_LOG
 //#define NOT_STEAL
 //#define PRINT_TEST

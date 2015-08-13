@@ -195,6 +195,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <BrowseInformation>true</BrowseInformation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>AI_2013.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -205,6 +206,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
+    <Bscmake>
+      <PreserveSbr>true</PreserveSbr>
+    </Bscmake>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='2012_Debug|Win32'">
     <ClCompile>
@@ -266,6 +270,7 @@
     <ClInclude Include="include\ai\Threads.h" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="testUnit\dlsTest.txt" />
     <Text Include="testUnit\heurEstLongestUnitTest.txt" />
     <Text Include="testUnit\heurEstUnitTest.txt" />
     <Text Include="testUnit\isSplitUnitTest.txt" />

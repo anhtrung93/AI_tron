@@ -12,6 +12,7 @@
 extern bool timeOut;
 extern int totalDepth;
 
+#ifdef UNIT_TEST
 int heurEstForNonSplit(int * board, const Position & myPos, const Position & enemyPos, bool isMaxPlayer){
 	int distFromMe[MAP_SIZE][MAP_SIZE];
 	int distFromEnemy[MAP_SIZE][MAP_SIZE];
@@ -52,6 +53,48 @@ int heurEstForNonSplit(int * board, const Position & myPos, const Position & ene
 
 	return tmp1 - tmp2;
 }
+#else // UNIT_TEST
+int heurEstForNonSplit(int * board, const Position & myPos, const Position & enemyPos, bool isMaxPlayer){
+	int distFromMe[MAP_SIZE][MAP_SIZE];
+	int distFromEnemy[MAP_SIZE][MAP_SIZE];
+	calMinDistToAll(board, myPos, distFromMe);
+	calMinDistToAll(board, enemyPos, distFromEnemy);
+
+	int * myVoronoiBoard = new int[MAP_SIZE * MAP_SIZE];
+	int * enemyVoronoiBoard = new int[MAP_SIZE * MAP_SIZE];
+	for (int idRow = 0; idRow < MAP_SIZE; ++idRow){
+		for (int idCol = 0; idCol < MAP_SIZE; ++idCol){
+			if (distFromMe[idRow][idCol] == distFromEnemy[idRow][idCol] && distFromMe[idRow][idCol] == INF){
+				myVoronoiBoard[CONVERT_COORD(idRow, idCol)] = BLOCK_OBSTACLE;
+				enemyVoronoiBoard[CONVERT_COORD(idRow, idCol)] = BLOCK_OBSTACLE;
+			}
+			else if (distFromMe[idRow][idCol] < distFromEnemy[idRow][idCol]){
+				enemyVoronoiBoard[CONVERT_COORD(idRow, idCol)] = BLOCK_OBSTACLE;
+				myVoronoiBoard[CONVERT_COORD(idRow, idCol)] = BLOCK_EMPTY;
+			}
+			else if (distFromMe[idRow][idCol] > distFromEnemy[idRow][idCol]){
+				myVoronoiBoard[CONVERT_COORD(idRow, idCol)] = BLOCK_OBSTACLE;
+				enemyVoronoiBoard[CONVERT_COORD(idRow, idCol)] = BLOCK_EMPTY;
+			}
+			else if (isMaxPlayer){
+				enemyVoronoiBoard[CONVERT_COORD(idRow, idCol)] = BLOCK_OBSTACLE;
+				myVoronoiBoard[CONVERT_COORD(idRow, idCol)] = BLOCK_EMPTY;
+			}
+			else {
+				myVoronoiBoard[CONVERT_COORD(idRow, idCol)] = BLOCK_OBSTACLE;
+				enemyVoronoiBoard[CONVERT_COORD(idRow, idCol)] = BLOCK_EMPTY;
+			}
+		}
+	}
+	int tmp1 = getUpperLongest(myVoronoiBoard, myPos);
+	int tmp2 = getUpperLongest(enemyVoronoiBoard, enemyPos);
+
+	delete[] myVoronoiBoard;
+	delete[] enemyVoronoiBoard;
+
+	return tmp1 - tmp2;
+}
+#endif //UNIT_TEST
 
 int heurEstForSplit(int * board, const Position & myPos, const Position & enemyPos, bool isMaxPlayer){
 	int diff = 0;

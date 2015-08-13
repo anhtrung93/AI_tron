@@ -70,5 +70,8 @@
     <Text Include="testUnit\minimaxUnitTest.txt">
       <Filter>Resource Files</Filter>
     </Text>
+    <Text Include="testUnit\dlsTest.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>
