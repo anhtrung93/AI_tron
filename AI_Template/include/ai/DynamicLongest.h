@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <mutex>
 
+
 extern bool timeOut;
 extern int totalDepth;
 
@@ -53,7 +54,7 @@ int heurEstForNonSplit(int * board, const Position & myPos, const Position & ene
 
 	return tmp1 - tmp2;
 }
-#else // UNIT_TEST
+#else // if not UNIT_TEST
 int heurEstForNonSplit(int * board, const Position & myPos, const Position & enemyPos, bool isMaxPlayer){
 	int distFromMe[MAP_SIZE][MAP_SIZE];
 	int distFromEnemy[MAP_SIZE][MAP_SIZE];
@@ -86,6 +87,7 @@ int heurEstForNonSplit(int * board, const Position & myPos, const Position & ene
 			}
 		}
 	}
+		
 	int tmp1 = getUpperLongest(myVoronoiBoard, myPos);
 	int tmp2 = getUpperLongest(enemyVoronoiBoard, enemyPos);
 
@@ -215,6 +217,197 @@ inline void storeStateInfo(StateInfo * info, int result, int alpha, int beta, in
 	info->depthExplore = depthMax;
 	info->isSplit = isSplit;
 	//info->depthExplore = depthLimitLvl - depthLvl;
+}
+
+int minimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, bool processNeg = true){
+	bool isMaxPlayer = (depthLvl % 2 == 0) ? true : false;
+
+	if (info->depthExplore == -1){
+		info->isSplit = isSplit(board, myPos, enemyPos);
+	}
+
+	preprocessParam(info, alpha, beta, processNeg, depthLvl, depthLimitLvl);
+	int result;
+	if (isCutNode(info, alpha, beta, processNeg, depthLvl, depthLimitLvl, result)){
+		return result;
+	}
+
+	if (info->isSplit == true){
+		if (info->estVal == 0){
+			info->estVal = heurEstForSplit(board, myPos, enemyPos, isMaxPlayer);
+			info->depthExplore = INF;
+			info->flag = FLAG_EXACT;
+		}
+		return info->estVal;
+	}
+	else if (depthLvl >= depthLimitLvl){
+		info->estVal = heurEstForNonSplit(board, myPos, enemyPos, isMaxPlayer);
+		info->depthExplore = 0;
+		info->flag = FLAG_EXACT;
+		return info->estVal;
+	}
+
+	Position posOfMovePlayer = (isMaxPlayer) ? myPos : enemyPos;
+	result = (isMaxPlayer) ? -INF : INF;
+
+	vector<pair<int, pair<int, unsigned long long>>> nextMoves;
+	getOrderedNextMoves(board, posOfMovePlayer, isMaxPlayer, hashVal, depthLvl, info, nextMoves);
+
+	int directionToMove = UNKNOWN_DIRECTION;
+	int depthMax = depthLimitLvl - depthLvl;
+	for (int idMove = 0; idMove < (int)nextMoves.size(); ++idMove){
+		int direction = nextMoves[idMove].first;
+		unsigned long long newHashVal = nextMoves[idMove].second.second;
+		StateInfo * newStateInfo = info->nextStates[direction];
+		Position newPos = moveDirection(posOfMovePlayer, direction);
+
+		board[CONVERT_COORD(newPos.x, newPos.y)] = board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];
+		++board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it trails
+		if (isMaxPlayer == true){
+			int tmp = minimax(board, newPos, enemyPos, depthLvl + 1, depthLimitLvl, alpha, beta, newHashVal, newStateInfo, processNeg);
+			if (result < tmp){
+				result = tmp;
+				directionToMove = direction;
+			}
+			alpha = MAX(alpha, result);
+		}
+		else {
+			int tmp = minimax(board, myPos, newPos, depthLvl + 1, depthLimitLvl, alpha, beta, newHashVal, newStateInfo, processNeg);
+			if (result > tmp){
+				result = tmp;
+			}
+			beta = MIN(beta, result);
+		}
+		--board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it normal
+		board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_EMPTY;
+
+		depthMax = MAX(depthMax, info->depthExplore - 1);
+
+		if (beta < alpha || (isMaxPlayer && result >= STOP_SEARCH_VAL) || (!isMaxPlayer && result <= -STOP_SEARCH_VAL && !processNeg) || timeOut == true){
+			break;
+		}
+	}
+
+	if (timeOut == false){
+		info->estVal = result;
+		info->depthExplore = depthMax;
+		info->flag = FLAG_EXACT;
+		//info->depthExplore = depthLimitLvl - depthLvl;
+	}
+
+
+#ifndef UNIT_TEST
+	if (depthLvl == 0){
+		return directionToMove;
+	}
+	else {
+		return result;
+	}
+#else
+	return result;
+#endif
+}
+
+int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, mutex & mtx, const int curTotalDepth, bool processNeg = true){
+	bool isMaxPlayer = (depthLvl % 2 == 0) ? false : true;
+
+	bool tmpSplit = false;
+	if (info->depthExplore == -1){
+		tmpSplit = isSplit(board, myPos, enemyPos);
+	}
+
+	preprocessParam(info, alpha, beta, processNeg, depthLvl, depthLimitLvl);
+	int result;
+	if (isCutNode(info, alpha, beta, processNeg, depthLvl, depthLimitLvl, result)){
+		return result;
+	}
+
+	if (info->isSplit || tmpSplit){
+		int tmpEstVal = info->estVal;
+		if (tmpEstVal == 0){
+			tmpEstVal = heurEstForSplit(board, myPos, enemyPos, isMaxPlayer);
+			mtx.lock();
+			if (curTotalDepth == totalDepth){
+				info->estVal = tmpEstVal;
+				info->isSplit = true;
+				info->depthExplore = INF;
+			}
+			mtx.unlock();
+		}
+		return tmpEstVal;
+	}
+	else if (depthLvl >= depthLimitLvl){
+		int tmpEstVal = heurEstForNonSplit(board, myPos, enemyPos, isMaxPlayer);
+		mtx.lock();
+		if (curTotalDepth == totalDepth){
+			info->estVal = tmpEstVal;
+			info->isSplit = false;
+			info->depthExplore = 0;
+		}
+		mtx.unlock();
+		return tmpEstVal;
+	}
+
+	Position posOfMovePlayer = (isMaxPlayer) ? myPos : enemyPos;
+	result = (isMaxPlayer) ? -INF : INF;
+
+	if (curTotalDepth != totalDepth){
+		return 0;
+	}
+
+	vector<pair<int, pair<int, unsigned long long>>> nextMoves;
+	getOrderedNextMoves(board, posOfMovePlayer, isMaxPlayer, hashVal, depthLvl, info, nextMoves);
+
+	if (curTotalDepth != totalDepth){
+		return 0;
+	}
+
+	int directionToMove = UNKNOWN_DIRECTION;
+	int depthMax = depthLimitLvl - depthLvl;
+	for (int idMove = 0; idMove < (int)nextMoves.size(); ++idMove){
+		int direction = nextMoves[idMove].first;
+		unsigned long long newHashVal = nextMoves[idMove].second.second;
+		StateInfo * newStateInfo = info->nextStates[direction];
+		Position newPos = moveDirection(posOfMovePlayer, direction);
+
+		board[CONVERT_COORD(newPos.x, newPos.y)] = board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];
+		++board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it trails
+		if (isMaxPlayer == true){
+			int tmp = enemyMinimax(board, newPos, enemyPos, depthLvl + 1, depthLimitLvl, alpha, beta, newHashVal, newStateInfo, mtx, curTotalDepth, processNeg);
+			if (result < tmp){
+				result = tmp;
+				directionToMove = direction;
+			}
+			alpha = MAX(alpha, result);
+		}
+		else {
+			int tmp = enemyMinimax(board, myPos, newPos, depthLvl + 1, depthLimitLvl, alpha, beta, newHashVal, newStateInfo, mtx, curTotalDepth, processNeg);
+			if (result > tmp){
+				result = tmp;
+			}
+			beta = MIN(beta, result);
+		}
+		--board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it normal
+		board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_EMPTY;
+
+		depthMax = MAX(depthMax, info->depthExplore);
+
+		if (curTotalDepth != totalDepth){
+			return 0;
+		}
+		else if (beta < alpha || (isMaxPlayer && result >= STOP_SEARCH_VAL) || (!isMaxPlayer && result <= -STOP_SEARCH_VAL && !processNeg)){
+			break;
+		}
+
+	}
+
+	mtx.lock();
+	if (curTotalDepth == totalDepth){
+		info->setValues(result, FLAG_EXACT, depthMax, tmpSplit);
+	}
+	mtx.unlock();
+
+	return result;
 }
 
 int minimax_old(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta){
@@ -475,197 +668,6 @@ int minimax_scout(int * board, const Position & myPos, const Position & enemyPos
 #else
 	return result;
 #endif
-}
-
-int minimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, bool processNeg = true){
-	bool isMaxPlayer = (depthLvl % 2 == 0) ? true : false;
-
-	if (info->depthExplore == -1){
-		info->isSplit = isSplit(board, myPos, enemyPos);
-	}
-	
-	preprocessParam(info, alpha, beta, processNeg, depthLvl, depthLimitLvl);
-	int result;
-	if (isCutNode(info, alpha, beta, processNeg, depthLvl, depthLimitLvl, result)){
-		return result;
-	}
-
-	if (info->isSplit == true){
-		if (info->estVal == 0){
-			info->estVal = heurEstForSplit(board, myPos, enemyPos, isMaxPlayer);
-			info->depthExplore = INF;
-			info->flag = FLAG_EXACT;
-		}
-		return info->estVal;
-	}
-	else if (depthLvl >= depthLimitLvl){
-		info->estVal = heurEstForNonSplit(board, myPos, enemyPos, isMaxPlayer);
-		info->depthExplore = 0;
-		info->flag = FLAG_EXACT;
-		return info->estVal;
-	}
-
-	Position posOfMovePlayer = (isMaxPlayer) ? myPos : enemyPos;
-	result = (isMaxPlayer) ? -INF : INF;
-
-	vector<pair<int, pair<int, unsigned long long>>> nextMoves;
-	getOrderedNextMoves(board, posOfMovePlayer, isMaxPlayer, hashVal, depthLvl, info, nextMoves);
-
-	int directionToMove = UNKNOWN_DIRECTION;
-	int depthMax = depthLimitLvl - depthLvl;
-	for (int idMove = 0; idMove < (int)nextMoves.size(); ++idMove){
-		int direction = nextMoves[idMove].first;
-		unsigned long long newHashVal = nextMoves[idMove].second.second;
-		StateInfo * newStateInfo = info->nextStates[direction];
-		Position newPos = moveDirection(posOfMovePlayer, direction);
-
-		board[CONVERT_COORD(newPos.x, newPos.y)] = board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];
-		++board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it trails
-		if (isMaxPlayer == true){
-			int tmp = minimax(board, newPos, enemyPos, depthLvl + 1, depthLimitLvl, alpha, beta, newHashVal, newStateInfo, processNeg);
-			if (result < tmp){
-				result = tmp;
-				directionToMove = direction;
-			}
-			alpha = MAX(alpha, result);
-		}
-		else {
-			int tmp = minimax(board, myPos, newPos, depthLvl + 1, depthLimitLvl, alpha, beta, newHashVal, newStateInfo, processNeg);
-			if (result > tmp){
-				result = tmp;
-			}
-			beta = MIN(beta, result);
-		}
-		--board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it normal
-		board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_EMPTY;
-
-		depthMax = MAX(depthMax, info->depthExplore - 1);
-
-		if (beta < alpha || (isMaxPlayer && result >= STOP_SEARCH_VAL) || (!isMaxPlayer && result <= -STOP_SEARCH_VAL && !processNeg) || timeOut == true){
-			break;
-		}
-	}
-
-	if (timeOut == false){
-		info->estVal = result;
-		info->depthExplore = depthMax;
-		info->flag = FLAG_EXACT;
-		//info->depthExplore = depthLimitLvl - depthLvl;
-	}
-
-
-#ifndef UNIT_TEST
-	if (depthLvl == 0){
-		return directionToMove;
-	}
-	else {
-		return result;
-	}
-#else
-	return result;
-#endif
-}
-
-int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, mutex & mtx, const int curTotalDepth, bool processNeg = true){
-	bool isMaxPlayer = (depthLvl % 2 == 0) ? false : true;
-
-	bool tmpSplit = false;
-	if (info->depthExplore == -1){
-		tmpSplit = isSplit(board, myPos, enemyPos);
-	}
-
-	preprocessParam(info, alpha, beta, processNeg, depthLvl, depthLimitLvl);
-	int result;
-	if (isCutNode(info, alpha, beta, processNeg, depthLvl, depthLimitLvl, result)){
-		return result;
-	}
-
-	if (info->isSplit || tmpSplit){
-		int tmpEstVal = info->estVal;
-		if (tmpEstVal == 0){
-			tmpEstVal = heurEstForSplit(board, myPos, enemyPos, isMaxPlayer);
-			mtx.lock();
-			if (curTotalDepth == totalDepth){
-				info->estVal = tmpEstVal;
-				info->isSplit = true;
-				info->depthExplore = INF;
-			}
-			mtx.unlock();
-		}
-		return tmpEstVal;
-	}
-	else if (depthLvl >= depthLimitLvl){
-		int tmpEstVal = heurEstForNonSplit(board, myPos, enemyPos, isMaxPlayer);
-		mtx.lock();
-		if (curTotalDepth == totalDepth){
-			info->estVal = tmpEstVal;
-			info->isSplit = false;
-			info->depthExplore = 0;
-		}
-		mtx.unlock();
-		return tmpEstVal;
-	}
-
-	Position posOfMovePlayer = (isMaxPlayer) ? myPos : enemyPos;
-	result = (isMaxPlayer) ? -INF : INF;
-
-	if (curTotalDepth != totalDepth){
-		return 0;
-	}
-
-	vector<pair<int, pair<int, unsigned long long>>> nextMoves;
-	getOrderedNextMoves(board, posOfMovePlayer, isMaxPlayer, hashVal, depthLvl, info, nextMoves);
-
-	if (curTotalDepth != totalDepth){
-		return 0;
-	}
-
-	int directionToMove = UNKNOWN_DIRECTION;
-	int depthMax = depthLimitLvl - depthLvl;
-	for (int idMove = 0; idMove < (int)nextMoves.size(); ++idMove){
-		int direction = nextMoves[idMove].first;
-		unsigned long long newHashVal = nextMoves[idMove].second.second;
-		StateInfo * newStateInfo = info->nextStates[direction];
-		Position newPos = moveDirection(posOfMovePlayer, direction);
-
-		board[CONVERT_COORD(newPos.x, newPos.y)] = board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];
-		++board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it trails
-		if (isMaxPlayer == true){
-			int tmp = enemyMinimax(board, newPos, enemyPos, depthLvl + 1, depthLimitLvl, alpha, beta, newHashVal, newStateInfo, mtx, curTotalDepth, processNeg);
-			if (result < tmp){
-				result = tmp;
-				directionToMove = direction;
-			}
-			alpha = MAX(alpha, result);
-		}
-		else {
-			int tmp = enemyMinimax(board, myPos, newPos, depthLvl + 1, depthLimitLvl, alpha, beta, newHashVal, newStateInfo, mtx, curTotalDepth, processNeg);
-			if (result > tmp){
-				result = tmp;
-			}
-			beta = MIN(beta, result);
-		}
-		--board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it normal
-		board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_EMPTY;
-
-		depthMax = MAX(depthMax, info->depthExplore);
-
-		if (curTotalDepth != totalDepth){
-			return 0;
-		}
-		else if (beta < alpha || (isMaxPlayer && result >= STOP_SEARCH_VAL) || (!isMaxPlayer && result <= -STOP_SEARCH_VAL && !processNeg)){
-			break;
-		}
-
-	}
-
-	mtx.lock();
-	if (curTotalDepth == totalDepth){
-		info->setValues(result, FLAG_EXACT, depthMax, tmpSplit);
-	}
-	mtx.unlock();
-
-	return result;
 }
 
 int enemyMinimax_scout(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, mutex & mtx, const int curTotalDepth, bool processNeg = true){

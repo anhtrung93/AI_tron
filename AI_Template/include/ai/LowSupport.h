@@ -6,7 +6,7 @@
 #include <mutex>
 
 //TODO turn this off
-#define UNIT_TEST
+//#define UNIT_TEST
 //#define PRINT_LOG
 //#define NOT_STEAL
 //#define PRINT_TEST
@@ -18,6 +18,9 @@ using namespace std;
 
 const int BLOCK_OCCUPIED = 6;
 const int UNKNOWN_DIRECTION = 0;
+
+const int NORMAL_VERTICE = 0;
+const int CUT_VERTICE = 1;
 
 const int MOVE_X[] = { 0, -1, 0, 1, 0 };
 const int MOVE_Y[] = { 0, 0, -1, 0, 1 };

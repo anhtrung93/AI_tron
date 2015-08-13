@@ -150,7 +150,7 @@ void mainThreadJob(){
 		cout << "command = " << cmd << endl;
 #endif
 
-#ifdef PRINT_TEST		
+#ifdef PRINT_TEST
 		if (isSplitStatus == true){
 			ofstream os("unitTest.txt", ofstream::app);
 
@@ -175,8 +175,7 @@ void mainThreadJob(){
 		else {
 			os << heurEstForNonSplit(board, myPos, enemyPos, true) << " ";
 		}
-		os << minimax_old(board, myPos, enemyPos, 0, depth, -INF, INF) << endl;*/
-		
+		os << minimax_old(board, myPos, enemyPos, 0, depth, -INF, INF) << endl;*/		
 #endif
 		
 		//Remember to call AI_Move() within allowed time		

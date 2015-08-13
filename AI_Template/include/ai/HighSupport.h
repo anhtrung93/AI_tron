@@ -141,7 +141,7 @@ void dfsCutVertices(int * board, const Position & pos, int & labelCount, int lab
 	++labelCount;
 	label[pos.x][pos.y] = labelCount;
 	lowReach[pos.x][pos.y] = INF;
-	cutVertices[pos.x][pos.y] = 0;
+	cutVertices[pos.x][pos.y] = NORMAL_VERTICE;
 
 	for (int direction = 1; direction <= 4; ++direction){
 		Position newPos = moveDirection(pos, direction);
@@ -149,7 +149,7 @@ void dfsCutVertices(int * board, const Position & pos, int & labelCount, int lab
 			if (label[newPos.x][newPos.y] == INF){
 				dfsCutVertices(board, newPos, labelCount, label, lowReach, cutVertices);
 				if (lowReach[newPos.x][newPos.y] >= label[pos.x][pos.y]){
-					cutVertices[pos.x][pos.y] = 1;
+					cutVertices[pos.x][pos.y] = CUT_VERTICE;
 				}
 				lowReach[pos.x][pos.y] = MIN(lowReach[pos.x][pos.y], lowReach[newPos.x][newPos.y]);
 			}
@@ -286,59 +286,48 @@ int getUpperLongest_old(int * board, const Position & myPos){
 	return result;
 }
 
-int dfsUpperLongest(int * board, const Position & pos, int label[][MAP_SIZE], int lowReach[][MAP_SIZE], int cutVertices[][MAP_SIZE], list<Position> & restoreList){
+int dfsUpperLongest(int * board, const Position & pos, int label[][MAP_SIZE], int lowReach[][MAP_SIZE], list<Position> & restoreList){
+	int numRed = 0, numBlack = 0;
 	bool isCurRed = isPosRed(pos);
 	int maxArea = 1;
+
 	board[CONVERT_COORD(pos.x, pos.y)] = BLOCK_OCCUPIED;
+	restoreList.push_back(pos);
+	vector<Position> cutPos;
 
-	vector<pair<int, int>>::iterator it;
-	for (int direction = 1; direction <= 4; ++direction){
-		Position startPos = moveDirection(pos, direction);
-		if (inMatrix(startPos) && board[CONVERT_COORD(startPos.x, startPos.y)] == BLOCK_EMPTY){
-			int numRed = 1, numBlack = 1;
-			stack<Position> myStack;
-			vector<Position> cutVerticesList;
-			myStack.push(startPos);
-			if (cutVertices[startPos.x][startPos.y] == 1){
-				cutVerticesList.push_back(startPos);
-			}
-			board[CONVERT_COORD(startPos.x, startPos.y)] = BLOCK_OCCUPIED;
-			restoreList.push_back(startPos);
-			while (!myStack.empty()){
-				Position curPos = myStack.top();
-				myStack.pop();
-
-				for (int direction = 1; direction <= 4; ++direction){
-					Position newPos = moveDirection(curPos, direction);
-					if (inMatrix(newPos) && board[CONVERT_COORD(newPos.x, newPos.y)] == BLOCK_EMPTY){
-						if (cutVertices[curPos.x][curPos.y] == 1 && lowReach[newPos.x][newPos.y] >= label[curPos.x][curPos.y]){
-							continue;
-						}
-						board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_OCCUPIED;
-						restoreList.push_back(newPos);
-						myStack.push(newPos);
-						if (isPosRed(newPos)){
-							++numRed;
-						}
-						else {
-							++numBlack;
-						}
-						if (cutVertices[newPos.x][newPos.y] == 1){
-							cutVerticesList.push_back(newPos);
-						}
-					}
+	stack<Position> dfsStack;
+	dfsStack.push(pos);
+	while (!dfsStack.empty()){
+		Position curPos = dfsStack.top();
+		dfsStack.pop();
+		if (isPosRed(curPos)){
+			++numRed;
+		}
+		else {
+			++numBlack;
+		}
+		for (int direction = 1; direction <= 4; ++direction){
+			Position newPos = moveDirection(curPos, direction);
+			if (inMatrix(newPos) && board[CONVERT_COORD(newPos.x, newPos.y)] == BLOCK_EMPTY){
+				if (lowReach[newPos.x][newPos.y] >= label[curPos.x][curPos.y]){
+					cutPos.push_back(newPos);
+				}
+				else {
+					board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_OCCUPIED;
+					restoreList.push_back(newPos);
+					dfsStack.push(newPos);
 				}
 			}
-			maxArea = MAX(maxAreaBasedOnRedBlack(numRed, numBlack, isCurRed), maxArea);
-			vector<Position>::iterator itCutList;
-			for (itCutList = cutVerticesList.begin(); itCutList != cutVerticesList.end(); ++itCutList){
-				int childResult = dfsUpperLongest(board, *itCutList, label, lowReach, cutVertices, restoreList);
-				int tmpArea = maxAreaBasedOnRedBlack(numRed, numBlack, isCurRed, isPosRed(*itCutList)) - 1 + childResult;
-				maxArea = MAX(tmpArea, maxArea);
-			}
-			if (cutVertices[startPos.x][startPos.y] == 1){
-				board[CONVERT_COORD(startPos.x, startPos.y)] = BLOCK_EMPTY;
-			}
+		}
+	}
+
+	maxArea = MAX(maxAreaBasedOnRedBlack(numRed, numBlack, isCurRed), maxArea);
+	vector<Position>::iterator itCutList;
+	for (itCutList = cutPos.begin(); itCutList != cutPos.end(); ++itCutList){
+		if (board[CONVERT_COORD(itCutList->x, itCutList->y)] == BLOCK_EMPTY){
+			int childResult = dfsUpperLongest(board, *itCutList, label, lowReach, restoreList);
+			int tmpArea = maxAreaBasedOnRedBlack(numRed, numBlack, isCurRed, !isPosRed(*itCutList)) + childResult;
+			maxArea = MAX(tmpArea, maxArea);
 		}
 	}
 
@@ -346,7 +335,6 @@ int dfsUpperLongest(int * board, const Position & pos, int label[][MAP_SIZE], in
 }
 
 int getUpperLongest(int * board, const Position & rootPos){
-
 	int myID = board[CONVERT_COORD(rootPos.x, rootPos.y)];
 	board[CONVERT_COORD(rootPos.x, rootPos.y)] = BLOCK_EMPTY;
 
@@ -356,7 +344,7 @@ int getUpperLongest(int * board, const Position & rootPos){
 	findCutVertices(board, rootPos, label, lowReach, cutVertices);
 
 	list<Position> restoreList;
-	int result = dfsUpperLongest(board, rootPos, label, lowReach, cutVertices, restoreList);
+	int result = dfsUpperLongest(board, rootPos, label, lowReach, restoreList);
 	restoreBoard(board, restoreList);
 
 	board[CONVERT_COORD(rootPos.x, rootPos.y)] = myID;
@@ -393,3 +381,4 @@ void calMinDistToAll(int * board, const Position & pos, int dist[][MAP_SIZE]){
 		}
 	}
 }
+
