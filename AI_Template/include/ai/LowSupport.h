@@ -8,6 +8,7 @@
 //TODO turn this off
 //#define UNIT_TEST
 //#define PRINT_LOG
+#define PRINT_LOG2
 //#define NOT_STEAL
 //#define PRINT_TEST
 

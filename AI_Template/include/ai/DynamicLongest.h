@@ -88,6 +88,18 @@ int heurEstForNonSplit(int * board, const Position & myPos, const Position & ene
 		}
 	}
 		
+	/*vector<Chamber *> chamberList;
+	int chamber[MAP_SIZE][MAP_SIZE];
+
+	buildChamberTree(myVoronoiBoard, myPos, chamberList, chamber);
+	buildChamberTree(enemyVoronoiBoard, enemyPos, chamberList, chamber);
+
+	//TODO
+	int tmp1 = 0;
+	int tmp2 = 0;
+
+	emptyChamberList(chamberList);*/
+
 	int tmp1 = getUpperLongest(myVoronoiBoard, myPos);
 	int tmp2 = getUpperLongest(enemyVoronoiBoard, enemyPos);
 
@@ -140,7 +152,13 @@ int heurEstForSplit(int * board, const Position & myPos, const Position & enemyP
 	if (diff == 0) {
 		diff = ((isMaxPlayer == true) ? -1 : 1);
 	}
-	return diff + (INF / 2) * ((diff > 0) ? 1 : -1);
+	int result = diff + (INF / 2) * ((diff > 0) ? 1 : -1);
+#ifndef UNIT_TEST
+	if (abs(result) >= STOP_SEARCH_VAL && abs(result) < INF * 3 / 4){
+		result += (result > 0) ? 100 : -100;
+	}
+#endif
+	return result;
 }
 
 inline void preprocessParam(StateInfo * info, int & alpha, int & beta, bool & processNeg, int depthLvl, int depthLimitLvl){
@@ -161,7 +179,12 @@ inline bool isCutNode(StateInfo * info, int alpha, int beta, bool processNeg, in
 	if (depthLvl == 0 || info->depthExplore == -1){
 		return false;
 	}
-	else if (info->depthExplore >= depthLimitLvl - depthLvl){
+	else  if (info->depthExplore >= depthLimitLvl - depthLvl && processNeg == false){
+		if (info->flag == FLAG_EXACT || alpha >= beta){
+			cutResult = info->estVal;
+			return true;
+		}
+	} else if (info->depthFromChildren >= depthLimitLvl - depthLvl){
 		if (info->flag == FLAG_EXACT || alpha >= beta){
 			cutResult = info->estVal;
 			return true;
@@ -203,7 +226,7 @@ inline void getOrderedNextMoves(int * board, const Position & posOfMovePlayer, b
 	}
 }
 
-inline void storeStateInfo(StateInfo * info, int result, int alpha, int beta, int depthMax, bool isSplit){
+inline void storeStateInfo(StateInfo * info, int result, int alpha, int beta, int depthExplore, int depthChild, bool isSplit){
 	info->estVal = result;
 	if (result <= alpha){
 		info->flag = FLAG_UPPER;
@@ -214,12 +237,13 @@ inline void storeStateInfo(StateInfo * info, int result, int alpha, int beta, in
 	else {
 		info->flag = FLAG_EXACT;
 	}
-	info->depthExplore = depthMax;
+	info->depthExplore = depthExplore;
+	info->depthFromChildren = depthChild;
 	info->isSplit = isSplit;
 	//info->depthExplore = depthLimitLvl - depthLvl;
 }
 
-int minimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, bool processNeg = true){
+int minimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, bool processNeg = false){
 	bool isMaxPlayer = (depthLvl % 2 == 0) ? true : false;
 
 	if (info->depthExplore == -1){
@@ -235,7 +259,8 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 	if (info->isSplit == true){
 		if (info->estVal == 0){
 			info->estVal = heurEstForSplit(board, myPos, enemyPos, isMaxPlayer);
-			info->depthExplore = INF;
+			info->depthExplore = INF / 2;
+			info->depthFromChildren = INF / 2;
 			info->flag = FLAG_EXACT;
 		}
 		return info->estVal;
@@ -243,6 +268,7 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 	else if (depthLvl >= depthLimitLvl){
 		info->estVal = heurEstForNonSplit(board, myPos, enemyPos, isMaxPlayer);
 		info->depthExplore = 0;
+		info->depthFromChildren = 0;
 		info->flag = FLAG_EXACT;
 		return info->estVal;
 	}
@@ -254,7 +280,7 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 	getOrderedNextMoves(board, posOfMovePlayer, isMaxPlayer, hashVal, depthLvl, info, nextMoves);
 
 	int directionToMove = UNKNOWN_DIRECTION;
-	int depthMax = depthLimitLvl - depthLvl;
+	int depthChildMin = INF;
 	for (int idMove = 0; idMove < (int)nextMoves.size(); ++idMove){
 		int direction = nextMoves[idMove].first;
 		unsigned long long newHashVal = nextMoves[idMove].second.second;
@@ -281,7 +307,7 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 		--board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it normal
 		board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_EMPTY;
 
-		depthMax = MAX(depthMax, info->depthExplore - 1);
+		depthChildMin = MIN(depthChildMin, newStateInfo->depthFromChildren);
 
 		if (beta < alpha || (isMaxPlayer && result >= STOP_SEARCH_VAL) || (!isMaxPlayer && result <= -STOP_SEARCH_VAL && !processNeg) || timeOut == true){
 			break;
@@ -290,9 +316,9 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 
 	if (timeOut == false){
 		info->estVal = result;
-		info->depthExplore = depthMax;
-		info->flag = FLAG_EXACT;
-		//info->depthExplore = depthLimitLvl - depthLvl;
+		info->depthExplore = depthLimitLvl - depthLvl;
+		info->depthFromChildren = depthChildMin + 1;
+		info->flag = FLAG_EXACT;	
 	}
 
 
@@ -308,7 +334,7 @@ int minimax(int * board, const Position & myPos, const Position & enemyPos, int 
 #endif
 }
 
-int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, mutex & mtx, const int curTotalDepth, bool processNeg = true){
+int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, mutex & mtx, const int curTotalDepth, bool processNeg = false){
 	bool isMaxPlayer = (depthLvl % 2 == 0) ? false : true;
 
 	bool tmpSplit = false;
@@ -330,7 +356,8 @@ int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos,
 			if (curTotalDepth == totalDepth){
 				info->estVal = tmpEstVal;
 				info->isSplit = true;
-				info->depthExplore = INF;
+				info->depthExplore = INF / 2;
+				info->depthFromChildren = INF / 2;
 			}
 			mtx.unlock();
 		}
@@ -343,6 +370,7 @@ int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos,
 			info->estVal = tmpEstVal;
 			info->isSplit = false;
 			info->depthExplore = 0;
+			info->depthFromChildren = 0;
 		}
 		mtx.unlock();
 		return tmpEstVal;
@@ -363,7 +391,7 @@ int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos,
 	}
 
 	int directionToMove = UNKNOWN_DIRECTION;
-	int depthMax = depthLimitLvl - depthLvl;
+	int depthChildMin = INF;
 	for (int idMove = 0; idMove < (int)nextMoves.size(); ++idMove){
 		int direction = nextMoves[idMove].first;
 		unsigned long long newHashVal = nextMoves[idMove].second.second;
@@ -390,7 +418,7 @@ int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos,
 		--board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it normal
 		board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_EMPTY;
 
-		depthMax = MAX(depthMax, info->depthExplore);
+		depthChildMin = MIN(depthChildMin, newStateInfo->depthFromChildren);
 
 		if (curTotalDepth != totalDepth){
 			return 0;
@@ -403,7 +431,7 @@ int enemyMinimax(int * board, const Position & myPos, const Position & enemyPos,
 
 	mtx.lock();
 	if (curTotalDepth == totalDepth){
-		info->setValues(result, FLAG_EXACT, depthMax, tmpSplit);
+		info->setValues(result, FLAG_EXACT, depthLimitLvl - depthLvl, depthChildMin + 1, tmpSplit);
 	}
 	mtx.unlock();
 
@@ -458,7 +486,7 @@ int minimax_old(int * board, const Position & myPos, const Position & enemyPos, 
 	return result;
 }
 
-int minimax_mtdf(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, bool processNeg = true){
+int minimax_mtdf(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, bool processNeg = false){
 	bool isMaxPlayer = (depthLvl % 2 == 0) ? true : false;
 
 	if (info->depthExplore == -1){
@@ -474,14 +502,14 @@ int minimax_mtdf(int * board, const Position & myPos, const Position & enemyPos,
 	if (info->isSplit == true){
 		if (info->estVal == 0){
 			info->estVal = heurEstForSplit(board, myPos, enemyPos, isMaxPlayer);
-			info->depthExplore = INF;
+			info->depthFromChildren = info->depthExplore = INF / 2;
 			info->flag = FLAG_EXACT;
 		}
 		return info->estVal;
 	}
 	else if (depthLvl >= depthLimitLvl){
 		info->estVal = heurEstForNonSplit(board, myPos, enemyPos, isMaxPlayer);
-		info->depthExplore = 0;
+		info->depthFromChildren = info->depthExplore = 0;
 		info->flag = FLAG_EXACT;
 		return info->estVal;
 	}
@@ -493,7 +521,7 @@ int minimax_mtdf(int * board, const Position & myPos, const Position & enemyPos,
 	getOrderedNextMoves(board, posOfMovePlayer, isMaxPlayer, hashVal, depthLvl, info, nextMoves);
 
 	int directionToMove = UNKNOWN_DIRECTION;
-	int depthMax = depthLimitLvl - depthLvl;
+	int depthChildMin = INF;
 	int alphaOrigin = alpha, betaOrigin = beta;
 	for (int idMove = 0; idMove < (int)nextMoves.size(); ++idMove){
 		int direction = nextMoves[idMove].first;
@@ -521,7 +549,7 @@ int minimax_mtdf(int * board, const Position & myPos, const Position & enemyPos,
 		--board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it normal
 		board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_EMPTY;
 
-		depthMax = MAX(depthMax, info->depthExplore - 1);
+		depthChildMin = MIN(depthChildMin, newStateInfo->depthFromChildren);
 
 		if (beta < alpha || (isMaxPlayer && result >= STOP_SEARCH_VAL) || (!isMaxPlayer && result <= -STOP_SEARCH_VAL && !processNeg) || timeOut == true){
 			break;
@@ -529,7 +557,7 @@ int minimax_mtdf(int * board, const Position & myPos, const Position & enemyPos,
 	}
 
 	if (timeOut == false){
-		storeStateInfo(info, result, alphaOrigin, betaOrigin, depthMax, info->isSplit);
+		storeStateInfo(info, result, alphaOrigin, betaOrigin, depthLimitLvl - depthLvl, depthChildMin + 1, info->isSplit);
 	}
 
 
@@ -568,7 +596,7 @@ int mtdf(int * board, const Position & myPos, const Position & enemyPos, int ini
 	return g;
 }
 
-int minimax_scout(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, bool processNeg = true){
+int minimax_scout(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, bool processNeg = false){
 	bool isMaxPlayer = (depthLvl % 2 == 0) ? true : false;
 
 	if (info->depthExplore == -1){
@@ -584,14 +612,14 @@ int minimax_scout(int * board, const Position & myPos, const Position & enemyPos
 	if (info->isSplit == true){
 		if (info->estVal == 0){
 			info->estVal = heurEstForSplit(board, myPos, enemyPos, isMaxPlayer);
-			info->depthExplore = INF;
+			info->depthFromChildren = info->depthExplore = INF / 2;
 			info->flag = FLAG_EXACT;
 		}
 		return info->estVal;
 	}
 	else if (depthLvl >= depthLimitLvl){
 		info->estVal = heurEstForNonSplit(board, myPos, enemyPos, isMaxPlayer);
-		info->depthExplore = 0;
+		info->depthFromChildren = info->depthExplore = 0;
 		info->flag = FLAG_EXACT;
 		return info->estVal;
 	}
@@ -603,7 +631,7 @@ int minimax_scout(int * board, const Position & myPos, const Position & enemyPos
 	getOrderedNextMoves(board, posOfMovePlayer, isMaxPlayer, hashVal, depthLvl, info, nextMoves);
 
 	int directionToMove = UNKNOWN_DIRECTION;
-	int depthMax = depthLimitLvl - depthLvl;
+	int depthChildMin = INF;
 	int alphaOrigin = alpha, betaOrigin = beta;
 	for (int idMove = 0; idMove < (int)nextMoves.size(); ++idMove){
 		int direction = nextMoves[idMove].first;
@@ -637,7 +665,7 @@ int minimax_scout(int * board, const Position & myPos, const Position & enemyPos
 		--board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it normal
 		board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_EMPTY;
 
-		depthMax = MAX(depthMax, info->depthExplore - 1);
+		depthChildMin = MIN(depthChildMin, newStateInfo->depthFromChildren);
 
 		if (timeOut == true){
 			break;
@@ -654,7 +682,7 @@ int minimax_scout(int * board, const Position & myPos, const Position & enemyPos
 	}
 
 	if (timeOut == false){
-		storeStateInfo(info, result, alphaOrigin, betaOrigin, depthMax, info->isSplit);
+		storeStateInfo(info, result, alphaOrigin, betaOrigin, depthLimitLvl - depthLvl, depthChildMin + 1, info->isSplit);
 	}
 
 
@@ -670,7 +698,7 @@ int minimax_scout(int * board, const Position & myPos, const Position & enemyPos
 #endif
 }
 
-int enemyMinimax_scout(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, mutex & mtx, const int curTotalDepth, bool processNeg = true){
+int enemyMinimax_scout(int * board, const Position & myPos, const Position & enemyPos, int depthLvl, int depthLimitLvl, int alpha, int beta, unsigned long long hashVal, StateInfo * info, mutex & mtx, const int curTotalDepth, bool processNeg = false){
 	bool isMaxPlayer = (depthLvl % 2 == 0) ? false : true;
 
 	bool tmpSplit = false;
@@ -692,7 +720,7 @@ int enemyMinimax_scout(int * board, const Position & myPos, const Position & ene
 			if (curTotalDepth == totalDepth){
 				info->estVal = tmpEstVal;
 				info->isSplit = true;
-				info->depthExplore = INF;
+				info->depthFromChildren = info->depthExplore = INF / 2;
 			}
 			mtx.unlock();
 		}
@@ -704,7 +732,7 @@ int enemyMinimax_scout(int * board, const Position & myPos, const Position & ene
 		if (curTotalDepth == totalDepth){
 			info->estVal = tmpEstVal;
 			info->isSplit = false;
-			info->depthExplore = 0;
+			info->depthFromChildren = info->depthExplore = 0;
 		}
 		mtx.unlock();
 		return tmpEstVal;
@@ -726,7 +754,7 @@ int enemyMinimax_scout(int * board, const Position & myPos, const Position & ene
 
 	int alphaOrigin = alpha, betaOrigin = beta;
 	int directionToMove = UNKNOWN_DIRECTION;
-	int depthMax = depthLimitLvl - depthLvl;	
+	int depthChildMin = INF;
 	for (int idMove = 0; idMove < (int)nextMoves.size(); ++idMove){
 		int direction = nextMoves[idMove].first;
 		unsigned long long newHashVal = nextMoves[idMove].second.second;
@@ -759,7 +787,7 @@ int enemyMinimax_scout(int * board, const Position & myPos, const Position & ene
 		--board[CONVERT_COORD(posOfMovePlayer.x, posOfMovePlayer.y)];//Make it normal
 		board[CONVERT_COORD(newPos.x, newPos.y)] = BLOCK_EMPTY;
 
-		depthMax = MAX(depthMax, info->depthExplore - 1);
+		depthChildMin = MIN(depthChildMin, newStateInfo->depthFromChildren);
 
 		if (curTotalDepth != totalDepth){
 			return 0;
@@ -778,7 +806,7 @@ int enemyMinimax_scout(int * board, const Position & myPos, const Position & ene
 
 	mtx.lock();
 	if (curTotalDepth == totalDepth){
-		storeStateInfo(info, result, alphaOrigin, betaOrigin, depthMax, tmpSplit);
+		storeStateInfo(info, result, alphaOrigin, betaOrigin, depthLimitLvl - depthLvl, depthChildMin + 1, info->isSplit);
 	}
 	mtx.unlock();
 
