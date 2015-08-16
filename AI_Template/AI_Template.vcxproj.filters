@@ -53,6 +53,9 @@
     <ClInclude Include="include\ai\Threads.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\ai\TreeOfChambers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="testUnit\isSplitUnitTest.txt">
