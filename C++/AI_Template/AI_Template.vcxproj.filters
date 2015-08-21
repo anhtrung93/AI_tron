@@ -76,5 +76,11 @@
     <Text Include="testUnit\dlsTest.txt">
       <Filter>Resource Files</Filter>
     </Text>
+    <Text Include="testUnit\boards.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="testUnit\copyTest.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>

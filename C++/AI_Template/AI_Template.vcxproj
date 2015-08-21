@@ -271,6 +271,8 @@
     <ClInclude Include="include\ai\TreeOfChambers.h" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="testUnit\boards.txt" />
+    <Text Include="testUnit\copyTest.txt" />
     <Text Include="testUnit\dlsTest.txt" />
     <Text Include="testUnit\heurEstLongestUnitTest.txt" />
     <Text Include="testUnit\heurEstUnitTest.txt" />
