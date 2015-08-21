@@ -15,18 +15,12 @@ extern bool isSplitStatus;
 extern mutex mtx;
 
 void sleepThreadJob(int depth){
-#ifdef PRINT_LOG
-	cout << "Start sleep at depth = " << depth << endl;
-#endif
 	this_thread::sleep_for(chrono::milliseconds(MAX_TIME));
 	mtx.lock();
 	if (depth == totalDepth){
 		timeOut = true;
 	}
 	mtx.unlock();
-#ifdef PRINT_LOG
-	cout << "Wake up" << endl;
-#endif
 }
 
 void stealThreadJob(int * board, Position myPos, Position enemyPos, int curTotalDepth){
@@ -70,7 +64,7 @@ void stealThreadJob(int * board, Position myPos, Position enemyPos, int curTotal
 		mtx.lock();
 		if (curTotalDepth == totalDepth){
 #ifdef PRINT_LOG
-			cout << "steal depth: " << depthLimitLvl << " time: " << (getCurTime() - turnStartTime) << "ms" << endl;
+			//cout << "steal depth: " << depthLimitLvl << " time: " << (getCurTime() - turnStartTime) << "ms" << endl;
 #endif
 			++depthLimitLvl;
 		}
@@ -90,15 +84,23 @@ void mainThreadJob(){
 	mtx.lock();
 	++totalDepth;
 	mtx.unlock();
-	if (totalDepth == 0){
-		initZobrist();
-	}
 
 	AI *p_ai = AI::GetInstance();
+
+	if (totalDepth == 0){
+		initZobrist();
+		isSecCopyFirst = true;
+		if (p_ai->IsMyTurn()){
+			isMeFirst = true;
+		}
+		else {
+			isMeFirst = false;
+		}
+	}
+
 	if (p_ai->IsMyTurn())
 	{
 #ifdef PRINT_LOG
-		cout << "Set timeOut = false at depth = " << totalDepth << endl;
 		unsigned long long startTime = getCurTime();
 #endif
 		timeOut = false;
@@ -109,10 +111,23 @@ void mainThreadJob(){
 		Position myPos = p_ai->GetMyPosition();
 		Position enemyPos = p_ai->GetEnemyPosition();
 
+		//check isSecCopyFirst status
+		if (isSecCopyFirst && isMeFirst && (enemyPos.x != 10 - myPos.x || enemyPos.y != 10 - myPos.y)){
+			isSecCopyFirst = false;
+		}
+		//end check
+
 		int depthLimitLvl = START_DEPTH_LEVEL;
 		int myUpper = getUpperLongest(board, myPos);
 		int enemyUpper = getUpperLongest(board, enemyPos);
 		int cmd = UNKNOWN_DIRECTION;
+		for (int direction = 1; direction <= 4; ++direction){
+			Position nextPos = moveDirection(myPos, direction);
+			if (inMatrix(nextPos) && board[CONVERT_COORD(nextPos.x, nextPos.y)] == BLOCK_EMPTY){
+				cmd = direction;
+				break;
+			}
+		}
 
 		unsigned long long hashVal = 0;
 		StateInfo * info = NULL;
@@ -136,10 +151,14 @@ void mainThreadJob(){
 			else {
 				tmpCmd = minimax(board, myPos, enemyPos, 0, depthLimitLvl, -INF, INF, hashVal, info);
 			}
+			
 			if (timeOut == false){
-				cmd = tmpCmd;
+				Position tmpPos = moveDirection(myPos, tmpCmd);
+				if (inMatrix(tmpPos) && board[CONVERT_COORD(tmpPos.x, tmpPos.y)] == BLOCK_EMPTY){
+					cmd = tmpCmd;
+				}
 #ifdef PRINT_LOG
-				cout << "depth: " << depthLimitLvl << " time: " << (getCurTime() - turnStartTime) << "ms" << endl;
+				//cout << "depth: " << depthLimitLvl << " time: " << (getCurTime() - turnStartTime) << "ms" << endl;
 #endif
 				++depthLimitLvl;
 			}
@@ -148,6 +167,17 @@ void mainThreadJob(){
 		cout << "Final depth: " << (depthLimitLvl - 1) << endl;
 		cout << "Time: " << (getCurTime() - startTime) << "ms" << endl;
 		cout << "command = " << cmd << endl;
+		cout << "Est value = " << ((info != NULL) ? info->estVal : 0) << endl;
+#endif
+
+#ifdef COPY_SPECIAL
+		if ((!isSplitStatus) && isSpecialBoard(board) && (!isMeFirst) && isSecCopyFirst && info->estVal < STOP_SEARCH_VAL){
+			int tmpCmd = whichDirection(myPos, Position(10 - enemyPos.x, 10 - enemyPos.y));
+			Position tmpPos = moveDirection(myPos, tmpCmd);
+			if (inMatrix(tmpPos) && board[CONVERT_COORD(tmpPos.x, tmpPos.y)] == BLOCK_EMPTY){
+				cmd = tmpCmd;
+			}
+		}
 #endif
 
 #ifdef PRINT_TEST
@@ -188,5 +218,23 @@ void mainThreadJob(){
 		memcpy(stealBoard, p_ai->GetBoard(), sizeof(int)* MAP_SIZE * MAP_SIZE);
 
 		thread(stealThreadJob, stealBoard, p_ai->GetMyPosition(), p_ai->GetEnemyPosition(), totalDepth).detach();
+
+		Position myPos = p_ai->GetMyPosition();
+		Position enemyPos = p_ai->GetEnemyPosition();
+
+		//check isSecCopyFirst status
+		if (isSecCopyFirst && !isMeFirst && (enemyPos.x != 10 - myPos.x || enemyPos.y != 10 - myPos.y)){
+			isSecCopyFirst = false;
+		}
+		//end check
+
+#ifdef PRINT_LOG2
+		if (isSecCopyFirst){
+			cout << "isSecCopyFirst == true" << endl;
+		}
+		else {
+			cout << "isSecCopyFirst == false" << endl;
+		}
+#endif
 	}
 }

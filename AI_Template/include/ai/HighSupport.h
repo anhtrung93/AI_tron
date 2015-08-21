@@ -166,6 +166,7 @@ void findCutVertices(int * board, const Position & rootPos, int label[][MAP_SIZE
 	for (int idRow = 0; idRow < MAP_SIZE; ++idRow){
 		for (int idCol = 0; idCol < MAP_SIZE; ++idCol){
 			label[idRow][idCol] = INF;
+			cutVertices[idRow][idCol] = 0;
 		}
 	}
 
@@ -286,7 +287,7 @@ int getUpperLongest_old(int * board, const Position & myPos){
 	return result;
 }
 
-int dfsUpperLongest(int * board, const Position & pos, int label[][MAP_SIZE], int lowReach[][MAP_SIZE], list<Position> & restoreList){
+int dfsUpperLongest(int * board, const Position & pos, int label[][MAP_SIZE], int lowReach[][MAP_SIZE], int cutVertices[][MAP_SIZE], list<Position> & restoreList){
 	int numRed = 0, numBlack = 0;
 	bool isCurRed = isPosRed(pos);
 	int maxArea = 1;
@@ -309,7 +310,7 @@ int dfsUpperLongest(int * board, const Position & pos, int label[][MAP_SIZE], in
 		for (int direction = 1; direction <= 4; ++direction){
 			Position newPos = moveDirection(curPos, direction);
 			if (inMatrix(newPos) && board[CONVERT_COORD(newPos.x, newPos.y)] == BLOCK_EMPTY){
-				if (lowReach[newPos.x][newPos.y] >= label[curPos.x][curPos.y]){
+				if (cutVertices[curPos.x][curPos.y] == CUT_VERTICE && lowReach[newPos.x][newPos.y] >= label[curPos.x][curPos.y]){
 					cutPos.push_back(newPos);
 				}
 				else {
@@ -325,7 +326,7 @@ int dfsUpperLongest(int * board, const Position & pos, int label[][MAP_SIZE], in
 	vector<Position>::iterator itCutList;
 	for (itCutList = cutPos.begin(); itCutList != cutPos.end(); ++itCutList){
 		if (board[CONVERT_COORD(itCutList->x, itCutList->y)] == BLOCK_EMPTY){
-			int childResult = dfsUpperLongest(board, *itCutList, label, lowReach, restoreList);
+			int childResult = dfsUpperLongest(board, *itCutList, label, lowReach, cutVertices, restoreList);
 			int tmpArea = maxAreaBasedOnRedBlack(numRed, numBlack, isCurRed, !isPosRed(*itCutList)) + childResult;
 			maxArea = MAX(tmpArea, maxArea);
 		}
@@ -344,7 +345,7 @@ int getUpperLongest(int * board, const Position & rootPos){
 	findCutVertices(board, rootPos, label, lowReach, cutVertices);
 
 	list<Position> restoreList;
-	int result = dfsUpperLongest(board, rootPos, label, lowReach, restoreList);
+	int result = dfsUpperLongest(board, rootPos, label, lowReach, cutVertices, restoreList);
 	restoreBoard(board, restoreList);
 
 	board[CONVERT_COORD(rootPos.x, rootPos.y)] = myID;

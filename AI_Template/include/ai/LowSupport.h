@@ -5,12 +5,12 @@
 #include <Windows.h>
 #include <mutex>
 
-//TODO turn this off
 //#define UNIT_TEST
 //#define PRINT_LOG
-#define PRINT_LOG2
+//#define PRINT_LOG2
 //#define NOT_STEAL
 //#define PRINT_TEST
+#define COPY_SPECIAL
 
 #define MIN(a, b) (((a) < (b))?(a):(b))
 #define MAX(a, b) (((a) > (b))?(a):(b))
@@ -19,6 +19,10 @@ using namespace std;
 
 const int BLOCK_OCCUPIED = 6;
 const int UNKNOWN_DIRECTION = 0;
+const int MY_VONOROI_EMPTY = 7;
+const int ENEMY_VONOROI_EMPTY = 8;
+const int MY_BLOCK_OCCUPIED = 7;
+const int ENEMY_BLOCK_OCCUPIED = 8;
 
 const int NORMAL_VERTICE = 0;
 const int CUT_VERTICE = 1;
@@ -37,6 +41,47 @@ bool timeOut = false;
 int totalDepth = -1;
 bool isSplitStatus = false;
 mutex mtx;
+
+bool isSecCopyFirst = true;
+bool isMeFirst;
+
+inline bool isSpecialBoard(int * board){
+	if (board[CONVERT_COORD(4, 5)] == BLOCK_OBSTACLE || board[CONVERT_COORD(5, 4)] == BLOCK_OBSTACLE){
+		return true;
+	}
+	return false;
+}
+
+inline bool isPalinBoard(int * board, const Position & myPos, const Position & enemyPos){
+	if (board[CONVERT_COORD(5, 5)] != BLOCK_EMPTY){
+		return false;
+	}
+	else if (myPos.x != 10 - enemyPos.x || myPos.y != 10 - enemyPos.y){
+		return false;
+	}
+	for (int idRow = 0; idRow < MAP_SIZE; ++idRow){
+		for (int idCol = 0; idCol <= MAP_SIZE / 2; ++idCol){
+			if (board[CONVERT_COORD(idRow, idCol)] == BLOCK_EMPTY){
+				if (board[CONVERT_COORD(10 - idRow, 10 - idCol)] != BLOCK_EMPTY){
+					return false;
+				}
+			}
+			else if (board[CONVERT_COORD(10 - idRow, 10 - idCol)] == BLOCK_EMPTY){
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+inline int whichDirection(const Position & pos, const Position & nextPos){
+	for (int direction = 1; direction <= 4; ++direction){
+		if (nextPos.x == pos.x + MOVE_X[direction] && nextPos.y == pos.y + MOVE_Y[direction]){
+			return direction;
+		}
+	}
+	return UNKNOWN_DIRECTION;
+}
 
 inline bool inMatrix(const Position & pos) {
 	if (pos.x >= 0 && pos.x < MAP_SIZE){
